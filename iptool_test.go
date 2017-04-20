@@ -29,12 +29,19 @@ func TestIsPrivate(t *testing.T) {
 		}
 	}
 
+	for _, addr := range globalPrivateUseCIDRs {
+		ip, _, err := net.ParseCIDR(addr)
+		if !assert.NoError(t, err) {
+			return
+		}
+		addrs = append(addrs, ip.String())
+		expected = append(expected, true)
+	}
+
 	addrs = append(addrs, "67.205.132.40")
 	expected = append(expected, false)
 	addrs = append(addrs, "www.google.com")
 	expected = append(expected, false)
-	addrs = append(addrs, "10.132.73.17")
-	expected = append(expected, true)
 
 	for i, addr := range addrs {
 		e := expected[i]
