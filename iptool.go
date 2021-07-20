@@ -4,12 +4,11 @@ package iptool
 import (
 	"net"
 
-	"github.com/getlantern/errors"
 	"github.com/getlantern/golog"
 )
 
 var (
-	log = golog.LoggerFor("landetect")
+	log = golog.LoggerFor("iptool")
 
 	globalPrivateUseNets []*net.IPNet
 
@@ -57,8 +56,8 @@ func init() {
 
 type Tool interface {
 	// IsPrivate checks whether the given IP address is private, meaning it's
-	// using one of addresses designed by IANA as not routable on the Internet or
-	// the address of one of the interfaces on the current host.
+	// using one of the addresses designated by IANA as not routable on the Internet,
+	// or the address of one of the interfaces on the current host.
 	IsPrivate(addr *net.IPAddr) bool
 }
 
@@ -66,24 +65,33 @@ type tool struct {
 	privateNets []*net.IPNet
 }
 
-func New() (Tool, error) {
-	// Build comprehensive list of private networks by combining interfaces with
-	// global private networks.
+// Create a new Tool instance. Returns a boolean to indicate whether the returned Tool
+// considers local interfaces w checking IsPrivate. On some platforms, it may not be
+// able to find local interfaces, in which case IsPrivate will only check for globally
+// defined private-use networks.
+func New() (iptool Tool, includesLocalInterfaces bool) {
+	// Build comprehensive list ofprivate networks by combining global private networks with
+	// list of local interfaces.
+	privateNets := make([]*net.IPNet, len(globalPrivateUseNets), len(globalPrivateUseNets))
+	copy(privateNets, globalPrivateUseNets)
+
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		return nil, errors.New("Unable to determine interface addresses: %v", err)
-	}
-	privateNets := make([]*net.IPNet, len(globalPrivateUseNets), len(globalPrivateUseNets)+len(addrs))
-	copy(privateNets, globalPrivateUseNets)
-	for _, addr := range addrs {
-		switch t := addr.(type) {
-		case *net.IPNet:
-			privateNets = append(privateNets, t)
+		// This can happen on Android due to https://github.com/golang/go/issues/40569
+		log.Errorf("Unable to determine interface addresses, will proceed with using only global private-use networks: %v", err)
+	} else {
+		includesLocalInterfaces = true
+		for _, addr := range addrs {
+			switch t := addr.(type) {
+			case *net.IPNet:
+				privateNets = append(privateNets, t)
+			}
 		}
 	}
+
 	return &tool{
 		privateNets: privateNets,
-	}, nil
+	}, includesLocalInterfaces
 }
 
 func (t *tool) IsPrivate(addr *net.IPAddr) bool {

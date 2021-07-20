@@ -5,21 +5,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIsPrivate(t *testing.T) {
-	tool, err := New()
-	if !assert.NoError(t, err) {
-		return
-	}
+	tool, includesLocalInterfaces := New()
+	require.True(t, includesLocalInterfaces)
 
 	var addrs []string
 	var expected []bool
 
 	ifAddrs, err := net.InterfaceAddrs()
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 
 	for _, ifAddr := range ifAddrs {
 		switch t := ifAddr.(type) {
@@ -31,9 +28,7 @@ func TestIsPrivate(t *testing.T) {
 
 	for _, addr := range globalPrivateUseCIDRs {
 		ip, _, err := net.ParseCIDR(addr)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 		addrs = append(addrs, ip.String())
 		expected = append(expected, true)
 	}
@@ -46,9 +41,7 @@ func TestIsPrivate(t *testing.T) {
 	for i, addr := range addrs {
 		e := expected[i]
 		ipaddr, err := net.ResolveIPAddr("ip", addr)
-		if !assert.NoError(t, err) {
-			return
-		}
+		require.NoError(t, err)
 		assert.Equal(t, e, tool.IsPrivate(ipaddr), addr)
 	}
 }
