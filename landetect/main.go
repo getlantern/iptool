@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/getlantern/golog"
-	"github.com/getlantern/iptool"
 	"net"
 	"os"
+
+	"github.com/getlantern/golog"
+	"github.com/getlantern/iptool"
 )
 
 var (
@@ -16,9 +17,9 @@ func main() {
 	if len(os.Args) < 2 {
 		log.Fatal("Please specify at least one ip address to check")
 	}
-	tool, err := iptool.New()
-	if err != nil {
-		log.Fatal(err)
+	tool, ok := iptool.New()
+	if !ok {
+		log.Fatal("Unable to build iptool")
 	}
 
 	for _, addr := range os.Args[1:] {

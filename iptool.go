@@ -95,11 +95,12 @@ func New() (iptool Tool, includesLocalInterfaces bool) {
 }
 
 func (t *tool) IsPrivate(addr *net.IPAddr) bool {
-	for _, privateNet := range t.privateNets {
-		if privateNet.Contains(addr.IP) {
-			log.Debugf("%v contains %v", privateNet, addr.IP)
-			return true
-		}
-	}
-	return false
+	return !addr.IP.IsGlobalUnicast() || addr.IP.IsLoopback()
+	// for _, privateNet := range t.privateNets {
+	// 	if privateNet.Contains(addr.IP) {
+	// 		log.Debugf("%v contains %v", privateNet, addr.IP)
+	// 		return true
+	// 	}
+	// }
+	// return false
 }
