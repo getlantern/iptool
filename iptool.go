@@ -58,6 +58,11 @@ type Tool interface {
 	// IsPrivate checks whether the given IP address is private, meaning it's
 	// using one of the addresses designated by IANA as not routable on the Internet,
 	// or the address of one of the interfaces on the current host.
+	//
+	// Specifically, it considers an IP private if it matches any of these conditions:
+	// - Is an IPv4 special use address as defined in https://tools.ietf.org/html/rfc5735#section-3
+	// - Is an IPv6 special use address as defined in https://tools.ietf.org/html/rfc5156
+	// - Is an address assigned to any of the current machine's network interfaces
 	IsPrivate(addr *net.IPAddr) bool
 }
 
@@ -66,13 +71,13 @@ type tool struct {
 }
 
 // Create a new Tool instance. Returns a boolean to indicate whether the returned Tool
-// considers local interfaces w checking IsPrivate. On some platforms, it may not be
+// considers local interfaces when checking IsPrivate. On some platforms, it may not be
 // able to find local interfaces, in which case IsPrivate will only check for globally
 // defined private-use networks.
 func New() (iptool Tool, includesLocalInterfaces bool) {
 	// Build comprehensive list ofprivate networks by combining global private networks with
 	// list of local interfaces.
-	privateNets := make([]*net.IPNet, len(globalPrivateUseNets), len(globalPrivateUseNets))
+	privateNets := make([]*net.IPNet, len(globalPrivateUseNets))
 	copy(privateNets, globalPrivateUseNets)
 
 	addrs, err := net.InterfaceAddrs()
@@ -97,9 +102,9 @@ func New() (iptool Tool, includesLocalInterfaces bool) {
 func (t *tool) IsPrivate(addr *net.IPAddr) bool {
 	for _, privateNet := range t.privateNets {
 		if privateNet.Contains(addr.IP) {
-			log.Debugf("%v contains %v", privateNet, addr.IP)
 			return true
 		}
 	}
+
 	return false
 }
